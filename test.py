@@ -13,49 +13,49 @@ class Phar(simpy.Resource):
 
 def patient(name, env, data, test_event, reg_phar, pac_phar, che_phar, dis_phar, pay_phar):
     data.setdefault(name, [])
-    print('%s arrives at %.1f' % (name, env.now))
+    # print('%s arrives at %.1f' % (name, env.now))
     with reg_phar.request() as reg_req:
         data[name].append(env.now)
-        print('%s queues reg at %.1f' % (name, env.now))
+        # print('%s queues reg at %.1f' % (name, env.now))
         yield reg_req
-        print('%s starts reg at %.1f' % (name, env.now))
+        # print('%s starts reg at %.1f' % (name, env.now))
         data[name].append(env.now)
         yield env.timeout(random.uniform(30, 300))
-        print('%s finishes reg at %.1f' % (name, env.now))
+        # print('%s finishes reg at %.1f' % (name, env.now))
     with pac_phar.request() as pac_req:
         data[name].append(env.now)
-        print('%s queues pac at %.1f' % (name, env.now))
+        # print('%s queues pac at %.1f' % (name, env.now))
         yield pac_req
-        print('%s starts pac at %.1f' % (name, env.now))
+        # print('%s starts pac at %.1f' % (name, env.now))
         data[name].append(env.now)
         yield env.timeout(random.uniform(120, 480))
-        print('%s finishes pac at %.1f' % (name, env.now))
+        # print('%s finishes pac at %.1f' % (name, env.now))
     with che_phar.request() as che_req:
         data[name].append(env.now)
-        print('%s queues che at %.1f' % (name, env.now))
+        # print('%s queues che at %.1f' % (name, env.now))
         yield che_req
-        print('%s starts che at %.1f' % (name, env.now))
+        # print('%s starts che at %.1f' % (name, env.now))
         data[name].append(env.now)
         yield env.timeout(random.uniform(10, 300))
-        print('%s finishes che at %.1f' % (name, env.now))
+        # print('%s finishes che at %.1f' % (name, env.now))
     with dis_phar.request() as dis_req:
         data[name].append(env.now)
-        print('%s queues dis at %.1f' % (name, env.now))
+        # print('%s queues dis at %.1f' % (name, env.now))
         yield dis_req
-        print('%s starts dis at %.1f' % (name, env.now))
+        # print('%s starts dis at %.1f' % (name, env.now))
         data[name].append(env.now)
         yield env.timeout(random.uniform(60, 600))
-        print('%s finishes dis at %.1f' % (name, env.now))
+        # print('%s finishes dis at %.1f' % (name, env.now))
     with pay_phar.request() as pay_req:
         data[name].append(env.now)
-        print('%s queues pay at %.1f' % (name, env.now))
+        # print('%s queues pay at %.1f' % (name, env.now))
         yield pay_req
-        print('%s starts pay at %.1f' % (name, env.now))
+        # print('%s starts pay at %.1f' % (name, env.now))
         data[name].append(env.now)
         yield env.timeout(random.uniform(30, 180))
-        print('%s finishes pay at %.1f' % (name, env.now))
+        # print('%s finishes pay at %.1f' % (name, env.now))
     data[name].append(env.now)
-    print('%s leaves at %.1f' % (name, env.now))
+    # print('%s leaves at %.1f' % (name, env.now))
     if env.now > SIM_TIME and is_all_done(reg_phar, pac_phar, che_phar, dis_phar, pay_phar):
         test_event.succeed()
 
@@ -85,6 +85,15 @@ total %.1f
                    v[10] - v[0]))
 
 
+def evaluate(data):
+    average_total_time = sum(v[10] - v[0]
+                             for v in data.values()) / len(data.values())
+    average_total_queue_time = sum(
+        sum(v[1::2]) - sum(v[:-1:2]) for v in data.values()) / len(data.values())
+    # average_utility_rate = 0
+    return average_total_time + average_total_queue_time
+
+
 def patient_generator(env, data, test_event, reg_phar, pac_phar, che_phar, dis_phar, pay_phar):
     total_time = 0
     for i in itertools.count():
@@ -98,18 +107,28 @@ def patient_generator(env, data, test_event, reg_phar, pac_phar, che_phar, dis_p
     yield test_event
 
 
-random.seed(42)
-env = simpy.Environment()
+def simulate(schedule, seed):
+    random.seed(seed)
+    env = simpy.Environment()
+    # 2, 3, 1, 4, 1 = 11
+    reg_phar = Phar(env, capacity=schedule[0])
+    pac_phar = Phar(env, capacity=schedule[1])
+    che_phar = Phar(env, capacity=schedule[2])
+    dis_phar = Phar(env, capacity=schedule[3])
+    pay_phar = Phar(env, capacity=schedule[4])
+    data = {}
+    test_event = env.event()
+    p = env.process(patient_generator(env, data, test_event, reg_phar,
+                                      pac_phar, che_phar, dis_phar, pay_phar))
+    env.run(until=p)
+    # print(data)
+    # logging(data)
+    return evaluate(data)
 
-# 2, 3, 1, 4, 1 = 11
-reg_phar = Phar(env, capacity=10)
-pac_phar = Phar(env, capacity=10)
-che_phar = Phar(env, capacity=10)
-dis_phar = Phar(env, capacity=10)
-pay_phar = Phar(env, capacity=10)
 
-data = {}
-test_event = env.event()
-p = env.process(patient_generator(env, data, test_event, reg_phar,
-                                  pac_phar, che_phar, dis_phar, pay_phar))
-env.run(until=p)
+def costfunction(iterations=10, schedule=[10, 10, 10, 10, 10]):
+    total_cost = 0
+    for i in range(iterations):
+        total_cost += simulate(schedule=schedule, seed=i)
+    cost = total_cost / iterations
+    return cost
