@@ -1,3 +1,6 @@
 - staff varies through time
 - optimization
-- neural network attemp
+    -[x] average total time
+    -[x] average queue time
+    -[ ] average utility rate
+- neural network

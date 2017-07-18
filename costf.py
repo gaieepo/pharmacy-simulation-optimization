@@ -1,9 +1,11 @@
 import simpy
 import random
 import itertools
+from config import *
 
 NUM_PHAR = 3
-SIM_TIME = 3600 * 9
+SIM_HOUR = 3600
+SIM_TIME = SIM_HOUR * 9
 
 
 class Phar(simpy.Resource):
@@ -11,7 +13,7 @@ class Phar(simpy.Resource):
         return len(self.queue) == 0 and len(self.users) == 0
 
 
-def patient(name, env, data, test_event, reg_phar, pac_phar, che_phar, dis_phar, pay_phar):
+def patient(name, env, data, generation_terminate, reg_phar, pac_phar, che_phar, dis_phar, pay_phar):
     data.setdefault(name, [])
     # print('%s arrives at %.1f' % (name, env.now))
     with reg_phar.request() as reg_req:
@@ -57,7 +59,7 @@ def patient(name, env, data, test_event, reg_phar, pac_phar, che_phar, dis_phar,
     data[name].append(env.now)
     # print('%s leaves at %.1f' % (name, env.now))
     if env.now > SIM_TIME and is_all_done(reg_phar, pac_phar, che_phar, dis_phar, pay_phar):
-        test_event.succeed()
+        generation_terminate.succeed()
 
 
 def is_all_done(*args):
@@ -86,47 +88,70 @@ total %.1f
 
 
 def evaluate(data):
+    """
+    Cost function evaluation parameters:
+        - average_total_time
+        - average_total_queue_time
+        - average_utility_rate
+    """
     average_total_time = sum(v[10] - v[0]
                              for v in data.values()) / len(data.values())
     average_total_queue_time = sum(
         sum(v[1::2]) - sum(v[:-1:2]) for v in data.values()) / len(data.values())
-    # average_utility_rate = 0
     return average_total_time + average_total_queue_time
 
 
-def patient_generator(env, data, test_event, reg_phar, pac_phar, che_phar, dis_phar, pay_phar):
+def patient_generator(env, data, generation_terminate, reg_phar, pac_phar, che_phar, dis_phar, pay_phar):
     total_time = 0
     for i in itertools.count():
-        env.process(patient('Patient %d' % i, env, data, test_event, reg_phar,
+        env.process(patient('Patient %d' % i, env, data, generation_terminate, reg_phar,
                             pac_phar, che_phar, dis_phar, pay_phar))
-        interval = random.expovariate(0.01190) + 60
+        base_interval = 0
+        if SIM_HOUR * 0 <= total_time < SIM_HOUR * 1:
+            base_interval = random.expovariate(0.00798)
+        elif SIM_HOUR * 1 <= total_time < SIM_HOUR * 2:
+            base_interval = random.expovariate(0.01122)
+        elif SIM_HOUR * 2 <= total_time < SIM_HOUR * 3:
+            base_interval = random.expovariate(0.01190)
+        elif SIM_HOUR * 3 <= total_time < SIM_HOUR * 4:
+            base_interval = random.expovariate(0.01047)
+        elif SIM_HOUR * 4 <= total_time < SIM_HOUR * 5:
+            base_interval = random.expovariate(0.00621)
+        elif SIM_HOUR * 5 <= total_time < SIM_HOUR * 6:
+            base_interval = random.expovariate(0.00724)
+        elif SIM_HOUR * 6 <= total_time < SIM_HOUR * 7:
+            base_interval = random.expovariate(0.01127)
+        elif SIM_HOUR * 7 <= total_time < SIM_HOUR * 8:
+            base_interval = random.expovariate(0.01054)
+        elif SIM_HOUR * 8 <= total_time < SIM_HOUR * 9:
+            base_interval = random.expovariate(0.00740)
+        interval = base_interval + 60
         total_time += interval
         if total_time > SIM_TIME:
             break
         yield env.timeout(interval)
-    yield test_event
+    yield generation_terminate
 
 
 def simulate(schedule, seed):
     random.seed(seed)
     env = simpy.Environment()
-    # 2, 3, 1, 4, 1 = 11
     reg_phar = Phar(env, capacity=schedule[0])
     pac_phar = Phar(env, capacity=schedule[1])
     che_phar = Phar(env, capacity=schedule[2])
     dis_phar = Phar(env, capacity=schedule[3])
     pay_phar = Phar(env, capacity=schedule[4])
     data = {}
-    test_event = env.event()
-    p = env.process(patient_generator(env, data, test_event, reg_phar,
+    generation_terminate = env.event()
+    p = env.process(patient_generator(env, data, generation_terminate, reg_phar,
                                       pac_phar, che_phar, dis_phar, pay_phar))
     env.run(until=p)
-    # print(data)
-    # logging(data)
+    if DEBUG:
+        logging(data)
     return evaluate(data)
 
 
-def costfunction(iterations=10, schedule=[10, 10, 10, 10, 10]):
+def costfunction(schedule=[10, 10, 10, 10, 10], iterations=10):
     total_cost = 0
     for i in range(iterations):
         total_cost += simulate(schedule=schedule, seed=i)
