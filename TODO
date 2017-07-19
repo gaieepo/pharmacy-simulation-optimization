@@ -4,3 +4,4 @@
     -[x] average queue time
     -[ ] average utility rate
 - neural network
+- anealingoptimization to reduce attempts and eliminate random init effect
