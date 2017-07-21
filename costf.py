@@ -228,5 +228,3 @@ def costfunction(schedule, iterations=ITERATIONS):
         total_cost += simulate(schedule=schedule, seed=i)
     cost = total_cost / iterations
     return cost
-
-print(costfunction(BEST_SCHEDULE))
