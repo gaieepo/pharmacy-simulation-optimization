@@ -2,6 +2,6 @@
 - optimization
     -[x] average total time
     -[x] average queue time
-    -[ ] average utility rate
+    -[x] average utility rate
 - neural network
-- anealingoptimization to reduce attempts and eliminate random init effect
+- reinforcement learning

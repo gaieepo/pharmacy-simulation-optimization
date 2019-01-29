@@ -202,7 +202,7 @@ def patient_generator(env, data, generation_terminate, reg_phar, pac_phar, che_p
     yield generation_terminate
 
 
-def simulate(schedule, seed=42):
+def simulate(schedule, seed=SEED):
     random.seed(seed)
     env = simpy.Environment()
     reg_phar = Phar(env, capacity=MAX_PHAR)
@@ -228,3 +228,8 @@ def costfunction(schedule, iterations=ITERATIONS):
         total_cost += simulate(schedule=schedule, seed=i)
     cost = total_cost / iterations
     return cost
+
+
+if __name__ == '__main__':
+    cost = costfunction(INIT_SCHEDULE)
+    print(cost)
