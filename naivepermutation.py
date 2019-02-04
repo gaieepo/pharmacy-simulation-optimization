@@ -1,4 +1,4 @@
-from costf import costfunction
+from costf import calculate_cost
 
 
 def schedule_permutation(num_phar):
@@ -13,7 +13,7 @@ def schedule_permutation(num_phar):
 def naivepermutation():
     best = float('inf')
     for i in schedule_permutation(11):
-        cost = costfunction(i)
+        cost = calculate_cost(i)
         if cost < best:
             best = cost
             print(i, cost)

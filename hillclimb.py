@@ -1,4 +1,4 @@
-from costf import costfunction
+from costf import calculate_cost
 from config import *
 
 
@@ -31,11 +31,11 @@ def hillclimb(init=None):
     sche = init
     while True:
         neighbors = find_neighbors(sche)
-        current = costfunction(sche)
+        current = calculate_cost(sche)
         print(sche, current)
         best = current
         for i in range(len(neighbors)):
-            cost = costfunction(neighbors[i])
+            cost = calculate_cost(neighbors[i])
             if cost < best:
                 best = cost
                 sche = neighbors[i]
