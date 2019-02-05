@@ -1,5 +1,5 @@
 """
-oothmacy simulation cost function environment
+pharmacy simulation cost function environment
 
 Assumptions:
 - Station numbers are stable: registration, packing, checking, dispensing, payment
@@ -56,64 +56,6 @@ def logging(data):
                   )
 
 
-#########################################################
-# simulation
-#########################################################
-class Booth(simpy.PriorityResource):
-    @property
-    def is_done(self):
-        return len(self.queue) == 0 and len(self.users) == 0
-
-
-def patient(name, env, data, generation_terminate, reg_booth, pac_booth, che_booth, dis_booth, pay_booth):
-    data.setdefault(name, [])
-    log_it('%s arrives at %.1f' % (name, env.now))
-    with reg_booth.request(priority=2) as reg_req:
-        data[name].append(env.now)
-        log_it('%s queues reg at %.1f' % (name, env.now))
-        yield reg_req
-        log_it('%s starts reg at %.1f' % (name, env.now))
-        data[name].append(env.now)
-        yield env.timeout(random.uniform(30, 300))
-        log_it('%s finishes reg at %.1f' % (name, env.now))
-    with pac_booth.request(priority=2) as pac_req:
-        data[name].append(env.now)
-        log_it('%s queues pac at %.1f' % (name, env.now))
-        yield pac_req
-        log_it('%s starts pac at %.1f' % (name, env.now))
-        data[name].append(env.now)
-        yield env.timeout(random.uniform(120, 480))
-        log_it('%s finishes pac at %.1f' % (name, env.now))
-    with che_booth.request(priority=2) as che_req:
-        data[name].append(env.now)
-        log_it('%s queues che at %.1f' % (name, env.now))
-        yield che_req
-        log_it('%s starts che at %.1f' % (name, env.now))
-        data[name].append(env.now)
-        yield env.timeout(random.uniform(10, 300))
-        log_it('%s finishes che at %.1f' % (name, env.now))
-    with dis_booth.request(priority=2) as dis_req:
-        data[name].append(env.now)
-        log_it('%s queues dis at %.1f' % (name, env.now))
-        yield dis_req
-        log_it('%s starts dis at %.1f' % (name, env.now))
-        data[name].append(env.now)
-        yield env.timeout(random.uniform(60, 600))
-        log_it('%s finishes dis at %.1f' % (name, env.now))
-    with pay_booth.request(priority=2) as pay_req:
-        data[name].append(env.now)
-        log_it('%s queues pay at %.1f' % (name, env.now))
-        yield pay_req
-        log_it('%s starts pay at %.1f' % (name, env.now))
-        data[name].append(env.now)
-        yield env.timeout(random.uniform(30, 180))
-        log_it('%s finishes pay at %.1f' % (name, env.now))
-    data[name].append(env.now)
-    log_it('%s leaves at %.1f' % (name, env.now))
-    if env.now > SIM_TIME and is_all_done(reg_booth, pac_booth, che_booth, dis_booth, pay_booth):
-        generation_terminate.succeed()
-
-
 def evaluate(data):
     """ Cost function evaluation parameters:
         - average_total_time
@@ -125,6 +67,64 @@ def evaluate(data):
     average_total_queue_time = sum(
         sum(v[1::2]) - sum(v[:-1:2]) for v in data.values()) / len(data.values())
     return average_total_time + average_total_queue_time
+
+
+#########################################################
+# simulation
+#########################################################
+class Booth(simpy.PriorityResource):
+    @property
+    def is_done(self):
+        return len(self.queue) == 0 and len(self.users) == 0
+
+
+def patient(name, env, data, generation_terminate, reg_booth, pac_booth, che_booth, dis_booth, pay_booth):
+    data.setdefault(name, [])
+    log_it(f"{name} arrives at {env.now:.1f}")
+    with reg_booth.request() as reg_req:
+        data[name].append(env.now)
+        log_it(f"{name} queues reg at {env.now:.1f}")
+        yield reg_req
+        log_it(f"{name} starts reg at {env.now:.1f}")
+        data[name].append(env.now)
+        yield env.timeout(random.uniform(30, 300))
+        log_it(f"{name} finishes reg at {env.now:.1f}")
+    with pac_booth.request() as pac_req:
+        data[name].append(env.now)
+        log_it(f"{name} queues pac at {env.now:.1f}")
+        yield pac_req
+        log_it(f"{name} starts pac at {env.now:.1f}")
+        data[name].append(env.now)
+        yield env.timeout(random.uniform(120, 480))
+        log_it(f"{name} finishes pac at {env.now:.1f}")
+    with che_booth.request() as che_req:
+        data[name].append(env.now)
+        log_it(f"{name} queues che at {env.now:.1f}")
+        yield che_req
+        log_it(f"{name} starts che at {env.now:.1f}")
+        data[name].append(env.now)
+        yield env.timeout(random.uniform(10, 300))
+        log_it(f"{name} finishes che at {env.now:.1f}")
+    with dis_booth.request() as dis_req:
+        data[name].append(env.now)
+        log_it(f"{name} queues dis at {env.now:.1f}")
+        yield dis_req
+        log_it(f"{name} starts dis at {env.now:.1f}")
+        data[name].append(env.now)
+        yield env.timeout(random.uniform(60, 600))
+        log_it(f"{name} finishes dis at {env.now:.1f}")
+    with pay_booth.request() as pay_req:
+        data[name].append(env.now)
+        log_it(f"{name} queues pay at {env.now:.1f}")
+        yield pay_req
+        log_it(f"{name} starts pay at {env.now:.1f}")
+        data[name].append(env.now)
+        yield env.timeout(random.uniform(30, 180))
+        log_it(f"{name} finishes pay at {env.now:.1f}")
+    data[name].append(env.now)
+    log_it(f"{name} leaves at {env.now:.1f}")
+    if env.now > SIM_TIME and is_all_done(reg_booth, pac_booth, che_booth, dis_booth, pay_booth):
+        generation_terminate.succeed()
 
 
 def calculate_break(sche):
@@ -153,7 +153,7 @@ def create_break(env, phar, timings):
     prev = 0
     for t in range(0, len(timings), 2):
         env.timeout(timings[t] * SIM_HOUR - prev)
-        with phar.request(priority=1) as req:
+        with phar.request(priority=-1) as req:
             yield req
             yield env.timeout((timings[t+1] - timings[t]) * SIM_HOUR)
 
